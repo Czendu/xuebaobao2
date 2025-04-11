@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel函数查询系统</title>
+    <style>
+        :root {
+            --excel-green: #217346;
+            --excel-dark-green: #1C6B42;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Microsoft YaHei, sans-serif;
+	    font-size: 9pt;
+            background: linear-gradient( 135deg,
+        #1a5f38,  /* 深绿 */
+        #217346 25%,  /* EXCEL主绿 */
+        #28a745 75%,  /* 亮绿 */
+        #1C6B42  /* 深绿 */
+    );
+ background-size: 200% 200%;
+ animation: gradientBG 15s ease infinite;            
+ min-height: 100vh;
+        }
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+	    padding: 20px;
+        }
+
+        .search-box {
+            position: relative;
+            width: 80%;
+            max-width: 600px;
+            margin: 20px auto;
+            margin: 20px auto;
+            box-sizing: border-box;
+	    margin-top: 20px; /* 在原有样式中添加 */
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 12px 8px 12px 20px;
+            border: 2px solid #fff;
+            border-radius: 25px;
+            font-size: 16px;
+            background: rgba(255,255,255,0.9);
+        }
+
+        .close-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #666;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+           gap: 15px;
+           margin: 20px auto;
+           max-width: 600px;  /* 与搜索框同宽 */
+           width: 90%;
+        }
+
+        .btn {
+    background: #fff;
+    color: var(--excel-green);
+    padding: 12px 30px;  /* 增大按钮尺寸 */
+    border: none;
+    border-radius: 25px;  /* 更圆润的边角 */
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 9pt;
+    flex: 1;  /* 等宽按钮 */
+    max-width: 200px;  /* 限制最大宽度 */
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .function-list {
+            columns: 2;
+            column-gap: 30px;
+        }
+
+        .function-item {
+            padding: 8px;
+            cursor: pointer;
+            break-inside: avoid;
+            transition: background 0.2s;
+        }
+
+        .function-item:hover {
+            background: #f0f0f0;
+        }
+
+        .example-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        code {
+            background: #e8e8e8;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            padding: 8px 15px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .modal h2 {
+            padding-right: 80px;
+            margin-top: 0;
+            color: var(--excel-green);
+        }
+
+        @media (max-width: 768px) {
+            .function-list {
+                columns: 1;
+            }
+            .modal {
+                padding: 20px;
+            }
+            .modal-close-btn {
+                right: 10px;
+                top: 10px;
+                padding: 6px 12px;
+            }
+ .btn-group {
+        flex-direction: column;
+        align-items: center;
+    }
+    .btn {
+        width: 100%;
+        max-width: 300px;
+        padding: 12px 20px;
+    }
+        }
+	.container h1 {
+    color: #fff; /* 白色字体 */
+    text-align: center; /* 水平居中 */
+    margin: 30px 0; /* 上下边距30px */
+    font-size: 24pt; /* 适当放大字号 */
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2); /* 添加文字阴影增强可读性 */
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+   <h1>EXCEL函数查询系统</h1>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="输入函数名称..." list="functions">
+            <span class="close-btn" onclick="clearSearch()">×</span>
+            <datalist id="functions"></datalist>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn" onclick="handleSearch()">立即查询</button>
+            <button class="btn" onclick="showDirectory()">函数目录</button>
+        </div>
+
+        <div id="detailModal" class="modal"></div>
+        <div id="directoryModal" class="modal"></div>
+    </div>
+<footer style="
+    text-align: center;
+    color: white;
+    padding: 20px;
+    font-family: 'Microsoft YaHei', sans-serif;
+    font-size: 11pt;
+    position: relative;
+    z-index: 1;
+">
+    雪宝宝的玩具
+</footer>
+    <script>
+        // 完整的Excel函数数据（50个）
+        const excelFunctions = [
+            // 查找与引用函数
+            { 
+                name: "VLOOKUP",
+                desc: "垂直查找函数，在表格数组的首列查找指定的值，并返回表格数组当前行中其他列的值",
+                syntax: "VLOOKUP(lookup_value, table_array, col_index_num, [range_lookup])",
+                example: "=VLOOKUP(A2, A2:B10, 2, FALSE) // 精确查找A2在A2:B10区域第二列的值"
+            },
+            // 其他函数数据...（保持原有50个函数数据，确保最后一个元素没有逗号）
+            // 示例结尾：
+            {
+                name: "CUBEMEMBER",
+                desc: "返回多维数据集中的成员或元组",
+                syntax: "CUBEMEMBER(connection, member_expression, [caption])",
+                example: "=CUBEMEMBER(\"Sales\",\"[Product].[Category].[Beverages]\")"
+            },
+	    {
+                name: "HLOOKUP",
+        	desc: "水平查找函数，在表格数组的首行查找指定的值，并返回表格数组当前列中其他行的值",
+        	syntax: "HLOOKUP(lookup_value, table_array, row_index_num, [range_lookup])",
+        	example: "=HLOOKUP(\"季度\", A1:D3, 3, FALSE)"
+    },
+    	    {
+        	name: "XLOOKUP",
+        	desc: "新一代查找函数，支持任意方向的查找和搜索模式设置",
+        	syntax: "XLOOKUP(lookup_value, lookup_array, return_array, [if_not_found], [match_mode], [search_mode])",
+        	example: "=XLOOKUP(A2, B2:B10, C2:C10, \"未找到\")"
+    },
+    {
+        name: "INDEX",
+        desc: "返回表格或区域中的值或值的引用",
+        syntax: "INDEX(array, row_num, [column_num])",
+        example: "=INDEX(A1:C10, 3, 2) // 返回第3行第2列的值"
+    },
+    {
+        name: "MATCH",
+        desc: "返回指定数值在指定数组中的相对位置",
+        syntax: "MATCH(lookup_value, lookup_array, [match_type])",
+        example: "=MATCH(\"苹果\", A1:A10, 0) // 返回苹果在列表中的位置"
+    },
+
+    // 数学与三角函数
+    {
+        name: "SUM",
+        desc: "求和函数，计算所有参数数值之和",
+        syntax: "SUM(number1, [number2], ...)",
+        example: "=SUM(A1:A10) // 计算A1到A10的和"
+    },
+    {
+        name: "SUMIF",
+        desc: "条件求和函数，对满足条件的单元格求和",
+        syntax: "SUMIF(range, criteria, [sum_range])",
+        example: "=SUMIF(B2:B10, \">5000\", C2:C10) // 对B列大于5000对应的C列求和"
+    },
+    {
+        name: "SUMIFS",
+        desc: "多条件求和函数",
+        syntax: "SUMIFS(sum_range, criteria_range1, criteria1, [criteria_range2, criteria2], ...)",
+        example: "=SUMIFS(C2:C10, A2:A10, \"北京\", B2:B10, \">5000\")"
+    },
+    {
+        name: "ROUND",
+        desc: "四舍五入函数",
+        syntax: "ROUND(number, num_digits)",
+        example: "=ROUND(3.1415, 2) // 返回3.14"
+    },
+    {
+        name: "RAND",
+        desc: "返回0到1之间的随机数",
+        syntax: "RAND()",
+        example: "=RAND()*100 // 生成0-100之间的随机数"
+    },
+
+    // 文本函数
+    {
+        name: "TEXT",
+        desc: "数值转文本函数，将数值转换为指定格式的文本",
+        syntax: "TEXT(value, format_text)",
+        example: "=TEXT(TODAY(),\"yyyy-mm-dd\") // 显示当前日期为2023-08-01格式"
+    },
+    {
+        name: "CONCATENATE",
+        desc: "文本合并函数，将多个文本合并为一个文本",
+        syntax: "CONCATENATE(text1, [text2], ...)",
+        example: "=CONCATENATE(A2,\"-\",B2) // 合并A2和B2单元格内容"
+    },
+    {
+        name: "LEFT",
+        desc: "从文本左侧提取指定数量的字符",
+        syntax: "LEFT(text, [num_chars])",
+        example: "=LEFT(\"Excel\", 2) // 返回\"Ex\""
+    },
+    {
+        name: "RIGHT",
+        desc: "从文本右侧提取指定数量的字符",
+        syntax: "RIGHT(text, [num_chars])",
+        example: "=RIGHT(\"Excel\", 3) // 返回\"cel\""
+    },
+    {
+        name: "MID",
+        desc: "从文本指定位置提取指定数量的字符",
+        syntax: "MID(text, start_num, num_chars)",
+        example: "=MID(\"Excel\", 2, 3) // 返回\"xce\""
+    },
+
+    // 逻辑函数
+    {
+        name: "IF",
+        desc: "条件判断函数，根据逻辑测试结果返回不同值",
+        syntax: "IF(logical_test, value_if_true, [value_if_false])",
+        example: "=IF(A2>60,\"合格\",\"不合格\") // 判断A2单元格是否大于60"
+    },
+    {
+        name: "AND",
+        desc: "逻辑与函数，所有参数为TRUE时返回TRUE",
+        syntax: "AND(logical1, [logical2], ...)",
+        example: "=AND(A2>60,B2<100) // 同时满足A2>60且B2<100返回TRUE"
+    },
+    {
+        name: "OR",
+        desc: "逻辑或函数，任一参数为TRUE时返回TRUE",
+        syntax: "OR(logical1, [logical2], ...)",
+        example: "=OR(A2>90,B2>90) // 任一成绩大于90返回TRUE"
+    },
+    {
+        name: "NOT",
+        desc: "逻辑非函数，反转参数的逻辑值",
+        syntax: "NOT(logical)",
+        example: "=NOT(ISBLANK(A2)) // A2不为空时返回TRUE"
+    },
+    {
+        name: "IFERROR",
+        desc: "错误处理函数，公式计算结果错误时返回指定值",
+        syntax: "IFERROR(value, value_if_error)",
+        example: "=IFERROR(A2/B2, \"计算错误\")"
+    },
+
+    // 日期与时间函数
+    {
+        name: "DATE",
+        desc: "日期生成函数，返回特定日期的序列号",
+        syntax: "DATE(year, month, day)",
+        example: "=DATE(2023,8,1) // 返回2023年8月1日的日期值"
+    },
+    {
+        name: "DATEDIF",
+        desc: "日期差值计算函数，计算两个日期之间的差值",
+        syntax: "DATEDIF(start_date, end_date, unit)",
+        example: "=DATEDIF(A2,B2,\"M\") // 计算两个日期相差的月数"
+    },
+    {
+        name: "TODAY",
+        desc: "返回当前日期",
+        syntax: "TODAY()",
+        example: "=TODAY() // 返回当前日期如2023-08-01"
+    },
+    {
+        name: "NOW",
+        desc: "返回当前日期和时间",
+        syntax: "NOW()",
+        example: "=NOW() // 返回如2023-08-01 09:30"
+    },
+    {
+        name: "EDATE",
+        desc: "返回指定月数之前或之后的日期",
+        syntax: "EDATE(start_date, months)",
+        example: "=EDATE(TODAY(), 3) // 返回当前日期三个月后的日期"
+    },
+
+    // 统计函数
+    {
+        name: "AVERAGE",
+        desc: "平均值函数，计算参数的算术平均值",
+        syntax: "AVERAGE(number1, [number2], ...)",
+        example: "=AVERAGE(B2:B10) // 计算B2到B10的平均值"
+    },
+    {
+        name: "COUNTIF",
+        desc: "条件计数函数，计算满足条件的单元格数量",
+        syntax: "COUNTIF(range, criteria)",
+        example: "=COUNTIF(C2:C10,\">60\") // 统计C列大于60的单元格数量"
+    },
+    {
+        name: "MAX",
+        desc: "返回参数列表中的最大值",
+        syntax: "MAX(number1, [number2], ...)",
+        example: "=MAX(A1:A10) // 返回A列最大值"
+    },
+    {
+        name: "MIN",
+        desc: "返回参数列表中的最小值",
+        syntax: "MIN(number1, [number2], ...)",
+        example: "=MIN(B2:B20) // 返回B列最小值"
+    },
+    {
+        name: "RANK",
+        desc: "返回某数字在数字列表中的排位",
+        syntax: "RANK(number, ref, [order])",
+        example: "=RANK(A2, A$2:A$10) // 计算A2在区域中的排名"
+    },
+
+    // 财务函数
+    {
+        name: "PMT",
+        desc: "计算贷款每期付款金额",
+        syntax: "PMT(rate, nper, pv, [fv], [type])",
+        example: "=PMT(5%/12, 5*12, 200000) // 计算20万贷款，5%年利率，5年期的月供"
+    },
+    {
+        name: "FV",
+        desc: "基于固定利率和等额分期付款方式，返回某项投资的未来值",
+        syntax: "FV(rate, nper, pmt, [pv], [type])",
+        example: "=FV(5%/12, 10*12, -500, 0) // 计算每月存500，年利率5%的10年后总额"
+    },
+    {
+        name: "NPV",
+        desc: "通过使用贴现率以及未来现金流计算投资的净现值",
+        syntax: "NPV(rate, value1, [value2], ...)",
+        example: "=NPV(10%, B2:B5) // 计算项目净现值"
+    },
+    {
+        name: "IRR",
+        desc: "返回由数值代表的一组现金流的内部收益率",
+        syntax: "IRR(values, [guess])",
+        example: "=IRR(B2:B5) // 计算投资内部收益率"
+    },
+    {
+        name: "RATE",
+        desc: "返回年金的各期利率",
+        syntax: "RATE(nper, pmt, pv, [fv], [type], [guess])",
+        example: "=RATE(60, -2000, 100000) // 计算贷款实际利率"
+    },
+
+    // 工程函数
+    {
+        name: "CONVERT",
+        desc: "单位换算函数",
+        syntax: "CONVERT(number, from_unit, to_unit)",
+        example: "=CONVERT(1, \"kg\", \"g\") // 将1千克转换为克"
+    },
+    {
+        name: "HEX2DEC",
+        desc: "将十六进制数转换为十进制数",
+        syntax: "HEX2DEC(number)",
+        example: "=HEX2DEC(\"A5\") // 返回165"
+    },
+    {
+        name: "DEC2BIN",
+        desc: "将十进制数转换为二进制数",
+        syntax: "DEC2BIN(number, [places])",
+        example: "=DEC2BIN(10) // 返回1010"
+    },
+    {
+        name: "COMPLEX",
+        desc: "将实系数和虚系数转换为复数",
+        syntax: "COMPLEX(real_num, i_num, [suffix])",
+        example: "=COMPLEX(3,4) // 返回3+4i"
+    },
+    {
+        name: "IMSUM",
+        desc: "返回多个复数的和",
+        syntax: "IMSUM(inumber1, [inumber2], ...)",
+        example: "=IMSUM(\"3+4i\",\"1+2i\") // 返回4+6i"
+    },
+
+    // 信息函数
+    {
+        name: "ISBLANK",
+        desc: "判断单元格是否为空",
+        syntax: "ISBLANK(value)",
+        example: "=IF(ISBLANK(A2), \"未填写\", \"已填写\")"
+    },
+    {
+        name: "ISERROR",
+        desc: "检查值是否为错误值",
+        syntax: "ISERROR(value)",
+        example: "=IF(ISERROR(A2/B2), 0, A2/B2)"
+    },
+    {
+        name: "ISTEXT",
+        desc: "检查值是否为文本",
+        syntax: "ISTEXT(value)",
+        example: "=IF(ISTEXT(A2), \"文本\", \"非文本\")"
+    },
+    {
+        name: "CELL",
+        desc: "返回有关单元格格式、位置或内容的信息",
+        syntax: "CELL(info_type, [reference])",
+        example: "=CELL(\"width\", A1) // 返回A列宽度"
+    },
+    {
+        name: "INFO",
+        desc: "返回有关操作环境的信息",
+        syntax: "INFO(type_text)",
+        example: "=INFO(\"osversion\") // 返回操作系统版本"
+    },
+
+    // 数据库函数
+    {
+        name: "DSUM",
+        desc: "对数据库中满足条件的记录字段求和",
+        syntax: "DSUM(database, field, criteria)",
+        example: "=DSUM(A1:D10, \"销售额\", F1:F2)"
+    },
+    {
+        name: "DAVERAGE",
+        desc: "对数据库中满足条件的记录字段求平均值",
+        syntax: "DAVERAGE(database, field, criteria)",
+        example: "=DAVERAGE(A1:D10, \"单价\", F1:F2)"
+    },
+    {
+        name: "DCOUNT",
+        desc: "对数据库中满足条件的数值单元格计数",
+        syntax: "DCOUNT(database, field, criteria)",
+        example: "=DCOUNT(A1:D10, \"年龄\", F1:F2)"
+    },
+    {
+        name: "DMAX",
+        desc: "返回数据库中满足条件的记录字段的最大值",
+        syntax: "DMAX(database, field, criteria)",
+        example: "=DMAX(A1:D10, \"销售额\", F1:F2)"
+    },
+    {
+        name: "DMIN",
+        desc: "返回数据库中满足条件的记录字段的最小值",
+        syntax: "DMIN(database, field, criteria)",
+        example: "=DMIN(A1:D10, \"成本\", F1:F2)"
+    },
+
+    // 多维数据集函数
+    {
+        name: "CUBEVALUE",
+        desc: "从多维数据集中返回汇总值",
+        syntax: "CUBEVALUE(connection, [member_expression1], [member_expression2], ...)",
+        example: "=CUBEVALUE(\"Sales\",\"[Measures].[Sales Amount]\")"
+    },
+    {
+        name: "CUBEMEMBER",
+        desc: "返回多维数据集中的成员或元组",
+        syntax: "CUBEMEMBER(connection, member_expression, [caption])",
+        example: "=CUBEMEMBER(\"Sales\",\"[Product].[Category].[Beverages]\")"
+    }
+
+
+
+
+        ]; // 注意数组结尾的分号
+
+        // 初始化搜索建议
+        function initSearch() {
+            const datalist = document.getElementById('functions');
+            excelFunctions.forEach(func => {
+                const option = document.createElement('option');
+                option.value = func.name;
+                datalist.appendChild(option);
+            });
+        }
+
+        // 处理搜索
+        function handleSearch() {
+            const inputValue = document.getElementById('searchInput').value.trim();
+            if (!inputValue) {
+                alert("请输入要查询的函数名称");
+                return;
+            }
+            showDetail(inputValue);
+        }
+
+        // 显示函数详情
+        function showDetail(funcName) {
+            closeModal();
+            const func = excelFunctions.find(f => f.name.toUpperCase() === funcName.toUpperCase());
+            if (!func) {
+                alert("未找到该函数，请检查函数名称");
+                return;
+            }
+
+            const modal = document.getElementById('detailModal');
+            modal.innerHTML = `
+                <h2>${func.name}</h2>
+                <button class="modal-close-btn" onclick="closeModal()">× 关闭</button>
+                <h3>功能</h3>
+                <p>${func.desc}</p>
+                <h3>语法</h3>
+                <div class="example-box">
+                    <code>${func.syntax}</code>
+                </div>
+                <h3>使用示例</h3>
+                <div class="example-box">
+                    <pre>${func.example}</pre>
+                </div>
+            `;
+            modal.style.display = 'block';
+        }
+
+        // 显示目录
+        function showDirectory() {
+            const modal = document.getElementById('directoryModal');
+            modal.innerHTML = `
+                <h2>全部函数目录</h2>
+                <button class="modal-close-btn" onclick="closeModal()">× 关闭</button>
+                <div class="function-list">
+                    ${excelFunctions.map(func => 
+                        `<div class="function-item" onclick="closeModal(); showDetail('${func.name}')">${func.name}</div>`
+                    ).join('')}
+                </div>
+            `;
+            modal.style.display = 'block';
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
+
+        // 清空搜索
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+        }
+
+        // 初始化
+        window.onload = function() {
+            initSearch();
+            
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleSearch();
+                }
+            });
+
+            window.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    closeModal();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
